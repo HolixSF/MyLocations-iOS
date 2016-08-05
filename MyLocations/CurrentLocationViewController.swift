@@ -35,13 +35,21 @@ class CurrentLocationViewController: UIViewController, CLLocationManagerDelegate
             return
         }
         
-        startLocationManager()
+        if updatingLocation {
+            stopLocationManager()
+        } else {
+            location = nil
+            lastLocationError = nil
+            startLocationManager()
+        }
         updateLabels()
+        configureButton()
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         updateLabels()
+        configureButton()
     }
 
     override func didReceiveMemoryWarning() {
@@ -62,6 +70,7 @@ class CurrentLocationViewController: UIViewController, CLLocationManagerDelegate
         
         stopLocationManager()
         updateLabels()
+        configureButton()
     }
     
     func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -69,9 +78,26 @@ class CurrentLocationViewController: UIViewController, CLLocationManagerDelegate
         
         print("didUpdateLocations \(newLocation)")
         
-        lastLocationError = nil
-        location = newLocation
-        updateLabels()
+        if newLocation.timestamp.timeIntervalSinceNow < -5 {
+            return
+        }
+        
+        if newLocation.horizontalAccuracy < 0 {
+            return
+        }
+        
+        if location == nil || location!.horizontalAccuracy > newLocation.horizontalAccuracy {
+            
+            lastLocationError = nil
+            location = newLocation
+            updateLabels()
+            
+            if newLocation.horizontalAccuracy <= locationManager.desiredAccuracy {
+                print("*** We're done!")
+                stopLocationManager()
+                configureButton()
+            }
+        }
     }
     
     func startLocationManager() {
@@ -129,6 +155,14 @@ class CurrentLocationViewController: UIViewController, CLLocationManagerDelegate
             }
             
             messageLabel.text = statusMessage
+        }
+    }
+    
+    func configureButton() {
+        if updatingLocation {
+            getButton.setTitle("Stop", forState: .Normal)
+        } else {
+            getButton.setTitle("Get My Location", forState: .Normal)
         }
     }
 }
